@@ -128,8 +128,13 @@ class UnderlinePattern implements PatternMatcher {
 		while (right < doc.length && doc[right] != "\n" && doc[right] != "-")
 			right++;
 		if (doc[right] !== "-") return undefined;
-		if (!isLetter(doc[right - 1])) return undefined;
-		if (right + 1 < doc.length && !isWhitespace(doc[right + 1]))
+		if (left + 1 >= right) return undefined;
+		if (isWhitespace(doc[right - 1])) return undefined;
+		if (
+			right + 1 < doc.length &&
+			!isWhitespace(doc[right + 1]) &&
+			!isPunctuation(doc[right + 1])
+		)
 			return undefined;
 		if (!outsideSelections(state.selection.ranges, left, right + 1))
 			return undefined;
@@ -308,6 +313,10 @@ function isLetter(str: string): boolean {
 
 function isWhitespace(str: string): boolean {
 	return str.trim() === "";
+}
+
+function isPunctuation(str: string): boolean {
+	return str.length === 1 && '.,()-"!?'.contains(str);
 }
 
 class DashExpansionPlugin implements PluginValue {
