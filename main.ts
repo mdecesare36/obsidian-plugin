@@ -73,21 +73,6 @@ export default class Underliner extends Plugin {
 	}
 }
 
-class TextWidget extends WidgetType {
-	private content: string;
-
-	constructor(content: string) {
-		super();
-		this.content = content;
-	}
-
-	override toDOM(view: EditorView): HTMLElement {
-		const span = document.createElement("span");
-		span.innerHTML = this.content;
-		return span;
-	}
-}
-
 class LatexWidget extends WidgetType {
 	private content: string;
 
@@ -111,17 +96,19 @@ interface PatternMatcher {
 	): Range<Decoration> | undefined;
 }
 
-class UnderlineWidget extends WidgetType {
+class HTMLWidget extends WidgetType {
 	content: string;
+	elem: string;
 
-	constructor(content: string) {
+	constructor(content: string, elem: string) {
 		super();
+		this.elem = elem;
 		this.content = content;
 	}
 
 	override toDOM(view: EditorView): HTMLElement {
-		const el = document.createElement("u");
-		el.textContent = this.content;
+		const el = document.createElement(this.elem);
+		el.innerHTML = this.content;
 		return el;
 	}
 }
@@ -147,7 +134,7 @@ class UnderlinePattern implements PatternMatcher {
 		if (!outsideSelections(state.selection.ranges, left, right + 1))
 			return undefined;
 		const contents = doc.substring(left + 1, right);
-		const widget = new UnderlineWidget(contents);
+		const widget = new HTMLWidget(contents, "u");
 		return Decoration.replace({ widget: widget }).range(left, right + 1);
 	}
 }
@@ -155,10 +142,12 @@ class UnderlinePattern implements PatternMatcher {
 class Formatter implements PatternMatcher {
 	pattern: RegExp;
 	attributes: { [key: string]: string };
+	element: string | undefined;
 
 	constructor(
 		pattern: RegExp | string,
 		attributes: { [key: string]: string },
+		element: string | undefined = undefined,
 	) {
 		switch (pattern.constructor) {
 			case RegExp:
@@ -172,6 +161,7 @@ class Formatter implements PatternMatcher {
 			this.pattern = new RegExp("^" + this.pattern.source);
 		}
 		this.attributes = attributes;
+		this.element = element;
 	}
 
 	getDecorator(
@@ -182,7 +172,14 @@ class Formatter implements PatternMatcher {
 		const results = this.pattern.exec(doc.substring(index));
 		if (results === null) return undefined;
 		const match = results[0];
-		return Decoration.mark({ attributes: this.attributes }).range(
+		if (this.element == undefined)
+			return Decoration.mark({ attributes: this.attributes }).range(
+				index,
+				index + match.length,
+			);
+		// wrap this in html element
+		const widget = new HTMLWidget(match, this.element);
+		return Decoration.replace({ widget: widget }).range(
 			index,
 			index + match.length,
 		);
@@ -209,7 +206,7 @@ class ReplacementPattern implements PatternMatcher {
 	constructor(from: string, to: string) {
 		this.from = from;
 		this.to = to;
-		this.widget = new TextWidget(to);
+		this.widget = new HTMLWidget(to, "span");
 	}
 
 	getDecorator(
@@ -239,7 +236,7 @@ class ReplacementPattern implements PatternMatcher {
 	}
 
 	element(): WidgetType {
-		return new TextWidget(this.to);
+		return new HTMLWidget(this.to, "span");
 	}
 }
 
@@ -318,8 +315,9 @@ class DashExpansionPlugin implements PluginValue {
 		new ReplacementPattern("--", "&mdash;"),
 		new MathVariables(),
 		new LatexEscapes(),
-		//new UnderlinePattern(),
+		new UnderlinePattern(),
 		new Formatter(/TODO/, { style: "color: red;" }),
+		new Formatter(/&\w+;/, {}, "span"),
 	];
 
 	logger: Logger;
