@@ -134,6 +134,7 @@ class UnderlinePattern implements PatternMatcher {
 	): Range<Decoration> | undefined {
 		// look for this pattern: -blah-
 		if (doc[index] !== "-") return undefined;
+		if (index > 0 && !isWhitespace(doc[index - 1])) return undefined;
 		const left = index;
 		let right = index + 1;
 		if (right >= doc.length || !isLetter(doc[right])) return undefined;
@@ -141,8 +142,8 @@ class UnderlinePattern implements PatternMatcher {
 			right++;
 		if (doc[right] !== "-") return undefined;
 		if (!isLetter(doc[right - 1])) return undefined;
-		// check that it isn't empty, i.e. --
-		if (left + 1 === right) return undefined;
+		if (right + 1 < doc.length && !isWhitespace(doc[right + 1]))
+			return undefined;
 		if (!outsideSelections(state.selection.ranges, left, right + 1))
 			return undefined;
 		const contents = doc.substring(left + 1, right);
