@@ -152,6 +152,43 @@ class UnderlinePattern implements PatternMatcher {
 	}
 }
 
+class Formatter implements PatternMatcher {
+	pattern: RegExp;
+	attributes: { [key: string]: string };
+
+	constructor(
+		pattern: RegExp | string,
+		attributes: { [key: string]: string },
+	) {
+		switch (pattern.constructor) {
+			case RegExp:
+				this.pattern = pattern as RegExp;
+				break;
+			case String:
+				this.pattern = new RegExp(pattern);
+				break;
+		}
+		if (!this.pattern.source.startsWith("^")) {
+			this.pattern = new RegExp("^" + this.pattern.source);
+		}
+		this.attributes = attributes;
+	}
+
+	getDecorator(
+		state: EditorState,
+		doc: string,
+		index: number,
+	): Range<Decoration> | undefined {
+		const results = this.pattern.exec(doc.substring(index));
+		if (results === null) return undefined;
+		const match = results[0];
+		return Decoration.mark({ attributes: this.attributes }).range(
+			index,
+			index + match.length,
+		);
+	}
+}
+
 function outsideSelections(
 	sr: readonly SelectionRange[],
 	left: number,
@@ -281,7 +318,8 @@ class DashExpansionPlugin implements PluginValue {
 		new ReplacementPattern("--", "&mdash;"),
 		new MathVariables(),
 		new LatexEscapes(),
-		new UnderlinePattern(),
+		//new UnderlinePattern(),
+		new Formatter(/TODO/, { style: "color: red;" }),
 	];
 
 	logger: Logger;
