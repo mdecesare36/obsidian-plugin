@@ -5,6 +5,7 @@ export {
 	ReplacementPattern,
 	MathVariables,
 	LatexEscapes,
+	ColourPattern,
 };
 
 import { Decoration, WidgetType } from "@codemirror/view";
@@ -166,6 +167,8 @@ class MathVariables implements PatternMatcher {
 		else if (!isWhitespace(doc[right])) return undefined;
 		else right--; // don't include the whitespace in latex
 
+		if (doc[left] == "`" || doc[right] == "`") return undefined;
+
 		// make sure not selected
 		if (!outsideSelections(state.selection.ranges, left, right + 1))
 			return undefined;
@@ -207,12 +210,51 @@ function isLetter(str: string): boolean {
 	return code >= A && code <= Z;
 }
 
+class ColourPattern implements PatternMatcher {
+	readonly COLOURS: string[] = ["red", "green", "blue"];
+
+	getDecorator(
+		state: EditorState,
+		doc: string,
+		index: number,
+	): Range<Decoration> | undefined {
+		for (const colour of this.COLOURS) {
+			if (doc.substring(index).startsWith(colour)) {
+				let right = index + colour.length;
+				if (right >= doc.length || doc[right] != "(") return undefined;
+				const left = right;
+				// find the content between parentheses
+				while (
+					++right < doc.length &&
+					doc[right] != ")" &&
+					doc[right] != "\n"
+				);
+				if (doc[right] != ")") return undefined;
+				if (left + 1 >= right - 1) return undefined;
+				if (
+					!outsideSelections(state.selection.ranges, index, right + 1)
+				)
+					return undefined;
+				const content = doc.substring(left + 1, right);
+				const widget = new HTMLWidget(content, "span", [
+					["style", `color:${colour}`],
+				]);
+				return Decoration.replace({ widget: widget }).range(
+					index,
+					right + 1,
+				);
+			}
+		}
+		return undefined;
+	}
+}
+
 function isWhitespace(str: string): boolean {
 	return str.trim() === "";
 }
 
 function isPunctuation(str: string): boolean {
-	return str.length === 1 && '.,()-"!?'.contains(str);
+	return str.length === 1 && ".,()-\"!?:`'".contains(str);
 }
 
 function outsideSelections(

@@ -10,11 +10,13 @@ import {
 } from "@codemirror/view";
 import { Range } from "@codemirror/state";
 import {
+	PatternMatcher,
 	UnderlinePattern,
 	Formatter,
 	ReplacementPattern,
 	MathVariables,
 	LatexEscapes,
+	ColourPattern,
 } from "./src/patterns";
 
 export default class Underliner extends Plugin {
@@ -79,6 +81,7 @@ class DashExpansionPlugin implements PluginValue {
 		new UnderlinePattern(),
 		new Formatter(/TODO/, { style: "color: red;" }),
 		new Formatter(/&\w+;/, {}, "span"),
+		new ColourPattern(),
 	];
 
 	logger: Logger;
