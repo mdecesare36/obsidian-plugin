@@ -149,26 +149,11 @@ class MathVariables implements PatternMatcher {
 		if (!isLetter(doc[index])) return undefined;
 		// make sure it's not valid english
 		if ("AI".contains(doc[index].toUpperCase())) return undefined; // only allow a single letter surrounded by any number of non-letter characters, surrounded by whitespace
-		let left = index - 1;
-		while (left >= 0 && !isLetter(doc[left]) && !isWhitespace(doc[left]))
-			left--;
-		if (left < 0) left = 0;
-		else if (!isWhitespace(doc[left])) return undefined;
-		else left++; // don't include the whitespace in latex
-
-		let right = index + 1;
-		while (
-			right < doc.length &&
-			!isLetter(doc[right]) &&
-			!isWhitespace(doc[right])
-		)
-			right++;
-		if (right >= doc.length) right = right = doc.length - 1;
-		else if (!isWhitespace(doc[right])) return undefined;
-		else right--; // don't include the whitespace in latex
-
-		if (doc[left] == "`" || doc[right] == "`") return undefined;
-
+		if (index > 0 && isLetter(doc[index - 1])) return undefined;
+		if (index < doc.length - 1 && isLetter(doc[index + 1]))
+			return undefined;
+		const left = index;
+		const right = index;
 		// make sure not selected
 		if (!outsideSelections(state.selection.ranges, left, right + 1))
 			return undefined;
