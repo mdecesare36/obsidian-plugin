@@ -85,10 +85,10 @@ class DashExpansionPlugin implements PluginValue {
 			false,
 		),
 		new Texify(/(?<= |^)([b-zB-HJ-Z])(?=[ ,.'\n])/), // variables
-		new Texify(/\\[a-z]+(?=[ \n\t])/), // escapes
-		new Texify(/\\.+{.+}/),
+		new Texify(/\\[a-z]+?(?=[ \n\t])/), // escapes
+		new Texify(/\\.+?{.+?}/),
 		new GeneralPatternMatcher(
-			/-[^-]+-/,
+			/-[^\n]+?-/,
 			undefined,
 			"u",
 			{ txt: "", rmv: 1 },
