@@ -44,26 +44,8 @@ export default class Underliner extends Plugin {
 
 		// change reading view
 		this.registerMarkdownPostProcessor((element, context) => {
-			const tw = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-			for (
-				let node: Node | null = tw.currentNode;
-				node !== null;
-				node = tw.nextNode()
-			) {
-				// const range = document.createRange();
-				//range.selectNode(node);
-				if (!node.parentNode) continue;
-				if (!node.textContent) continue;
-				if (node.textContent.trim().length === 0) continue;
-				console.log(node.textContent);
-				let innerHTML = node.textContent;
-				for (const pattern of DashExpansionPlugin.replacements) {
-					innerHTML = pattern.transform(innerHTML);
-				}
-				const newNode = document.createElement("span");
-				newNode.innerHTML = innerHTML;
-				node.parentNode.insertBefore(newNode, node);
-				node.parentNode.removeChild(node);
+			for (const p of DashExpansionPlugin.replacements) {
+				p.modifyHtmlElem(element);
 			}
 		});
 
@@ -100,8 +82,9 @@ class DashExpansionPlugin implements PluginValue {
 		new Texify(/(?<= |^)([b-zB-HJ-Z])(?=[ ,.'\n])/), // variables
 		new Texify(/\\[a-z]+?(?=[ \n\t])/), // escapes
 		new Texify(/\\.+?{.+?}/),
+		// underliner
 		new GeneralPatternMatcher(
-			/-[^\n]+?-/,
+			/(?<=\s)-[^\n]+?-/,
 			undefined,
 			"u",
 			{ txt: "", rmv: 1 },

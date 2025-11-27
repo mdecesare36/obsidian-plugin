@@ -12,7 +12,7 @@ interface PatternMatcher {
 		range: { from: number; to: number },
 	): Range<Decoration>[];
 
-	transform(txt: string): string;
+	modifyHtmlElem(elem: HTMLElement): void;
 }
 
 type EdgeInserter = {
@@ -104,14 +104,17 @@ class GeneralPatternMatcher implements PatternMatcher {
 		return results;
 	}
 
-	transform(txt: string): string {
+	modifyHtmlElem(elem: HTMLElement): void {
 		const global_matcher = new RegExp(this.match, "g");
-		return txt.replaceAll(global_matcher, (match: string) => {
-			const replacement = this.getReplacement(match);
-			const widget = this.getWidget(replacement);
-			const text = widget.toDOM(null).outerHTML;
-			return text;
-		});
+		elem.innerHTML = elem.innerHTML.replaceAll(
+			global_matcher,
+			(match: string) => {
+				const replacement = this.getReplacement(match);
+				const widget = this.getWidget(replacement);
+				const text = widget.toDOM(null).outerHTML;
+				return text;
+			},
+		);
 	}
 }
 
@@ -148,12 +151,15 @@ class Texify implements PatternMatcher {
 		return decs;
 	}
 
-	transform(txt: string): string {
+	modifyHtmlElem(elem: HTMLElement): void {
 		const global_pattern = new RegExp(this.match.source, "g");
-		return txt.replaceAll(global_pattern, (match: string) => {
-			const widget = new LatexWidget(match);
-			return widget.toDOM(null).outerHTML;
-		});
+		elem.innerHTML = elem.innerHTML.replaceAll(
+			global_pattern,
+			(match: string) => {
+				const widget = new LatexWidget(match);
+				return widget.toDOM(null).outerHTML;
+			},
+		);
 	}
 }
 
