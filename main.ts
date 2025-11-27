@@ -44,10 +44,18 @@ export default class Underliner extends Plugin {
 
 		// change reading view
 		this.registerMarkdownPostProcessor((element, context) => {
-			for (const p of DashExpansionPlugin.replacements) {
+			if (element.classList.contains("el-pre")) return;
+			for (const p of DashExpansionPlugin.postReplacements) {
 				p.modifyHtmlElem(element);
 			}
-		});
+		}, 0);
+
+		this.registerMarkdownPostProcessor((element, context) => {
+			if (element.classList.contains("el-pre")) return;
+			for (const p of DashExpansionPlugin.preReplacements) {
+				p.modifyHtmlElem(element);
+			}
+		}, -1);
 
 		this.registerEditorExtension(
 			ViewPlugin.define(() => {
@@ -62,9 +70,14 @@ export default class Underliner extends Plugin {
 }
 
 class DashExpansionPlugin implements PluginValue {
-	static replacements: PatternMatcher[] = [
+	static postReplacements: PatternMatcher[] = [
+		// new Texify(/(?<=\s)([b-zB-HJ-Z])(?=[,.'\s])/), // variables
+		// new Texify(/\\[a-zA-Z]+?(?=[ \n\t\\])/), // escapes
+		// new Texify(/\\[^\s]+?{[^\n]+?}/), // commands with {}
+	];
+	static preReplacements: PatternMatcher[] = [
 		new GeneralPatternMatcher(
-			/---/,
+			/(?<=\s)---(?=\s)/,
 			undefined,
 			"",
 			{ txt: "&mdash;", rmv: 1 },
@@ -72,19 +85,16 @@ class DashExpansionPlugin implements PluginValue {
 			false,
 		),
 		new GeneralPatternMatcher(
-			/--/,
+			/(?<=\s)--(?=\s)/,
 			undefined,
 			"",
 			{ txt: "&ndash;", rmv: 1 },
 			undefined,
 			false,
 		),
-		new Texify(/(?<= |^)([b-zB-HJ-Z])(?=[ ,.'\n])/), // variables
-		new Texify(/\\[a-z]+?(?=[ \n\t])/), // escapes
-		new Texify(/\\.+?{.+?}/),
 		// underliner
 		new GeneralPatternMatcher(
-			/(?<=\s)-[^\s][^\n]+?[^\s]-/,
+			/(?<=\s|^)-[a-zA-Z ,'0-9]+?-(?=\s)/,
 			undefined,
 			"u",
 			{ txt: "", rmv: 1 },
@@ -94,14 +104,6 @@ class DashExpansionPlugin implements PluginValue {
 		new GeneralPatternMatcher(
 			/TODO/,
 			{ style: "color: red;" },
-			"",
-			undefined,
-			undefined,
-			true,
-		),
-		new GeneralPatternMatcher(
-			/&\w+;/,
-			undefined,
 			"",
 			undefined,
 			undefined,
@@ -132,6 +134,10 @@ class DashExpansionPlugin implements PluginValue {
 			true,
 		),
 	];
+
+	static replacements: PatternMatcher[] = this.preReplacements.concat(
+		this.postReplacements,
+	);
 
 	logger: Logger;
 	decorations: DecorationSet = Decoration.none;
