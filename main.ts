@@ -94,7 +94,7 @@ class DashExpansionPlugin implements PluginValue {
 		),
 		// underliner
 		new GeneralPatternMatcher(
-			/(?<=\s|^)-[a-zA-Z ,'0-9]+?-(?=\s)/,
+			/(?<=\s|^)-[a-zA-Z ,'0-9]+?-(?=\s.:)/,
 			undefined,
 			"u",
 			{ txt: "", rmv: 1 },
