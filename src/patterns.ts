@@ -1,17 +1,9 @@
 export type { PatternMatcher };
-export {
-	GeneralPatternMatcher,
-	Formatter,
-	ReplacementPattern,
-	ColourPattern,
-	Texify,
-};
+export { GeneralPatternMatcher, ReplacementPattern, Texify };
 
 import { Decoration, WidgetType } from "@codemirror/view";
 import { SelectionRange, Range, EditorState } from "@codemirror/state";
 import { HTMLWidget, LatexWidget } from "./widgets";
-import { EditorSuggestTriggerInfo } from "obsidian";
-import { setMaxIdleHTTPParsers } from "http";
 
 interface PatternMatcher {
 	getDecorators(
@@ -126,71 +118,6 @@ class GeneralPatternMatcher implements PatternMatcher {
 	}
 }
 
-class Formatter implements PatternMatcher {
-	pattern: RegExp;
-	attributes: { [key: string]: string };
-	element: string | undefined;
-
-	constructor(
-		pattern: RegExp | string,
-		attributes: { [key: string]: string },
-		element: string | undefined = undefined,
-	) {
-		switch (pattern.constructor) {
-			case RegExp:
-				this.pattern = pattern as RegExp;
-				break;
-			case String:
-				this.pattern = new RegExp(pattern);
-				break;
-		}
-		this.attributes = attributes;
-		this.element = element;
-	}
-
-	getDecorators(
-		state: EditorState,
-		doc: string,
-		range: { from: number; to: number },
-	): Range<Decoration>[] {
-		return [];
-		const pattern_start = new RegExp("^" + this.pattern.source);
-		const results = pattern_start.exec(doc.substring(index));
-		if (results === null) return undefined;
-		const match = results[0];
-		if (this.element == undefined)
-			return Decoration.mark({ attributes: this.attributes }).range(
-				index,
-				index + match.length,
-			);
-		// wrap this in html element
-		const widget = new HTMLWidget(match, this.element);
-		return Decoration.replace({ widget: widget }).range(
-			index,
-			index + match.length,
-		);
-	}
-
-	modifyHtmlElem(elem: HTMLElement): void {
-		let target_elem = this.element;
-		if (!target_elem) target_elem = "span";
-		const replacement = document.createElement(target_elem);
-		let t: keyof typeof this.attributes;
-		for (t in this.attributes) {
-			replacement.setAttr(t, this.attributes[t]);
-		}
-
-		const global_pattern = new RegExp(this.pattern.source, "g");
-		elem.innerHTML = elem.innerHTML.replaceAll(
-			global_pattern,
-			(match: string) => {
-				replacement.innerText = match;
-				return replacement.outerHTML;
-			},
-		);
-	}
-}
-
 class ReplacementPattern implements PatternMatcher {
 	from: RegExp;
 	to: string;
@@ -291,68 +218,6 @@ class Texify implements PatternMatcher {
 			},
 		);
 	}
-}
-
-// free functions
-
-function isLetter(str: string): boolean {
-	if (str.length !== 1) return false;
-	const code = str.toUpperCase().charCodeAt(0);
-	const A = "A".charCodeAt(0);
-	const Z = "Z".charCodeAt(0);
-	return code >= A && code <= Z;
-}
-
-class ColourPattern implements PatternMatcher {
-	readonly COLOURS: string[] = ["red", "green", "blue"];
-
-	getDecorators(
-		state: EditorState,
-		doc: string,
-		range: { from: number; to: number },
-	): Range<Decoration>[] {
-		return [];
-		for (const colour of this.COLOURS) {
-			if (doc.substring(index).startsWith(colour)) {
-				let right = index + colour.length;
-				if (right >= doc.length || doc[right] != "(") return undefined;
-				const left = right;
-				// find the content between parentheses
-				while (
-					++right < doc.length &&
-					doc[right] != ")" &&
-					doc[right] != "\n"
-				);
-				if (doc[right] != ")") return undefined;
-				if (left + 1 >= right - 1) return undefined;
-				if (
-					!outsideSelections(state.selection.ranges, index, right + 1)
-				)
-					return undefined;
-				const content = doc.substring(left + 1, right);
-				const widget = new HTMLWidget(content, "span", [
-					["style", `color:${colour}`],
-				]);
-				return Decoration.replace({ widget: widget }).range(
-					index,
-					right + 1,
-				);
-			}
-		}
-		return undefined;
-	}
-
-	modifyHtmlElem(elem: HTMLElement): void {
-		return;
-	}
-}
-
-function isWhitespace(str: string): boolean {
-	return str.trim() === "";
-}
-
-function isPunctuation(str: string): boolean {
-	return str.length === 1 && ".,()-\"!?:`'".contains(str);
 }
 
 function outsideSelections(

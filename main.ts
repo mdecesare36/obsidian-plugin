@@ -68,8 +68,22 @@ export default class Underliner extends Plugin {
 
 class DashExpansionPlugin implements PluginValue {
 	static replacements: PatternMatcher[] = [
-		new ReplacementPattern(/---/, "&mdash;"),
-		new ReplacementPattern(/--/, "&ndash;"),
+		new GeneralPatternMatcher(
+			/---/,
+			undefined,
+			"",
+			{ txt: "&mdash;", rmv: 1 },
+			undefined,
+			false,
+		),
+		new GeneralPatternMatcher(
+			/--/,
+			undefined,
+			"",
+			{ txt: "&ndash;", rmv: 1 },
+			undefined,
+			false,
+		),
 		new Texify(/(?<= |^)([b-zB-HJ-Z])(?=[ ,.'\n])/), // variables
 		new Texify(/\\[a-z]+(?=[ \n\t])/), // escapes
 		new Texify(/\\.+{.+}/),
