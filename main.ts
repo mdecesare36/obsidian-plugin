@@ -11,12 +11,9 @@ import {
 import { Range } from "@codemirror/state";
 import {
 	PatternMatcher,
-	UnderlinePattern,
-	Formatter,
 	ReplacementPattern,
-	MathVariables,
-	LatexEscapes,
-	ColourPattern,
+	Texify,
+	GeneralPatternMatcher,
 } from "./src/patterns";
 
 export default class Underliner extends Plugin {
@@ -52,7 +49,9 @@ export default class Underliner extends Plugin {
 
 		// change reading view
 		this.registerMarkdownPostProcessor((element, context) => {
-			this.expandDash(element);
+			for (const pattern of DashExpansionPlugin.replacements) {
+				pattern.modifyHtmlElem(element);
+			}
 		});
 
 		this.registerEditorExtension(
@@ -62,12 +61,6 @@ export default class Underliner extends Plugin {
 		);
 	}
 
-	expandDash = (element: HTMLElement) => {
-		if (element) {
-			element.innerHTML = element.innerHTML.replaceAll("--", "&mdash;");
-		}
-	};
-
 	onunload() {
 		//this.logger.log("unloading...")
 	}
@@ -75,13 +68,59 @@ export default class Underliner extends Plugin {
 
 class DashExpansionPlugin implements PluginValue {
 	static replacements: PatternMatcher[] = [
-		new ReplacementPattern("--", "&mdash;"),
-		new MathVariables(),
-		new LatexEscapes(),
-		new UnderlinePattern(),
-		new Formatter(/TODO/, { style: "color: red;" }),
-		new Formatter(/&\w+;/, {}, "span"),
-		new ColourPattern(),
+		new ReplacementPattern(/---/, "&mdash;"),
+		new ReplacementPattern(/--/, "&ndash;"),
+		new Texify(/(?<= |^)([b-zB-HJ-Z])(?=[ ,.'\n])/), // variables
+		new Texify(/\\[a-z]+(?=[ \n\t])/), // escapes
+		new Texify(/\\.+{.+}/),
+		new GeneralPatternMatcher(
+			/-[^-]+-/,
+			undefined,
+			"u",
+			{ txt: "", rmv: 1 },
+			{ txt: "", rmv: 1 },
+			true,
+		),
+		new GeneralPatternMatcher(
+			/TODO/,
+			{ style: "color: red;" },
+			"",
+			undefined,
+			undefined,
+			true,
+		),
+		new GeneralPatternMatcher(
+			/&\w+;/,
+			undefined,
+			"",
+			undefined,
+			undefined,
+			true,
+		),
+		new GeneralPatternMatcher(
+			/red\(.+?\)/,
+			{ style: "color: red;" },
+			"",
+			{ txt: "", rmv: 4 },
+			{ txt: "", rmv: 1 },
+			true,
+		),
+		new GeneralPatternMatcher(
+			/green\(.+?\)/,
+			{ style: "color: green;" },
+			"",
+			{ txt: "", rmv: 6 },
+			{ txt: "", rmv: 1 },
+			true,
+		),
+		new GeneralPatternMatcher(
+			/blue\(.+?\)/,
+			{ style: "color: blue;" },
+			"",
+			{ txt: "", rmv: 5 },
+			{ txt: "", rmv: 1 },
+			true,
+		),
 	];
 
 	logger: Logger;
@@ -95,19 +134,16 @@ class DashExpansionPlugin implements PluginValue {
 		const doc = update.state.doc.toString();
 		const ds: Range<Decoration>[] = [];
 		for (const r of update.view.visibleRanges) {
-			for (let i = r.from; i < r.to; i++) {
-				for (const r of DashExpansionPlugin.replacements) {
-					const d = r.getDecorator(update.state, doc, i);
-					if (d) {
-						ds.push(d);
-						// skip searching this range -- important
-						i = d.to;
-						break;
-					}
-				}
+			for (const rep of DashExpansionPlugin.replacements) {
+				const decorators: Range<Decoration>[] = rep.getDecorators(
+					update.state,
+					doc,
+					r,
+				);
+				ds.push(...decorators);
 			}
 		}
-		this.decorations = Decoration.set(ds);
+		this.decorations = Decoration.set(ds, true);
 	};
 
 	public static spec: PluginSpec<DashExpansionPlugin> = {
