@@ -9,12 +9,7 @@ import {
 	ViewUpdate,
 } from "@codemirror/view";
 import { Range } from "@codemirror/state";
-import {
-	PatternMatcher,
-	ReplacementPattern,
-	Texify,
-	GeneralPatternMatcher,
-} from "./src/patterns";
+import { PatternMatcher, Texify, GeneralPatternMatcher } from "./src/patterns";
 
 export default class Underliner extends Plugin {
 	private logger: Logger = new Logger("Underliner");
@@ -49,8 +44,26 @@ export default class Underliner extends Plugin {
 
 		// change reading view
 		this.registerMarkdownPostProcessor((element, context) => {
-			for (const pattern of DashExpansionPlugin.replacements) {
-				pattern.modifyHtmlElem(element);
+			const tw = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+			for (
+				let node: Node | null = tw.currentNode;
+				node !== null;
+				node = tw.nextNode()
+			) {
+				// const range = document.createRange();
+				//range.selectNode(node);
+				if (!node.parentNode) continue;
+				if (!node.textContent) continue;
+				if (node.textContent.trim().length === 0) continue;
+				console.log(node.textContent);
+				let innerHTML = node.textContent;
+				for (const pattern of DashExpansionPlugin.replacements) {
+					innerHTML = pattern.transform(innerHTML);
+				}
+				const newNode = document.createElement("span");
+				newNode.innerHTML = innerHTML;
+				node.parentNode.insertBefore(newNode, node);
+				node.parentNode.removeChild(node);
 			}
 		});
 

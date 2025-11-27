@@ -1,7 +1,7 @@
 export type { PatternMatcher };
-export { GeneralPatternMatcher, ReplacementPattern, Texify };
+export { GeneralPatternMatcher, Texify };
 
-import { Decoration, WidgetType } from "@codemirror/view";
+import { Decoration } from "@codemirror/view";
 import { SelectionRange, Range, EditorState } from "@codemirror/state";
 import { HTMLWidget, LatexWidget } from "./widgets";
 
@@ -12,7 +12,7 @@ interface PatternMatcher {
 		range: { from: number; to: number },
 	): Range<Decoration>[];
 
-	modifyHtmlElem(elem: HTMLElement): void;
+	transform(txt: string): string;
 }
 
 type EdgeInserter = {
@@ -104,74 +104,14 @@ class GeneralPatternMatcher implements PatternMatcher {
 		return results;
 	}
 
-	modifyHtmlElem(elem: HTMLElement): void {
+	transform(txt: string): string {
 		const global_matcher = new RegExp(this.match, "g");
-		elem.innerHTML = elem.innerHTML.replaceAll(
-			global_matcher,
-			(match: string) => {
-				const replacement = this.getReplacement(match);
-				const widget = this.getWidget(replacement);
-				const text = widget.toDOM(null).outerHTML;
-				return text;
-			},
-		);
-	}
-}
-
-class ReplacementPattern implements PatternMatcher {
-	from: RegExp;
-	to: string;
-	widget: WidgetType;
-
-	constructor(from: RegExp, to: string) {
-		this.from = from;
-		this.to = to;
-		this.widget = new HTMLWidget(to, "span");
-	}
-
-	getDecorators(
-		state: EditorState,
-		doc: string,
-		range: { from: number; to: number },
-	): Range<Decoration>[] {
-		const searchString = doc.substring(range.from, range.to);
-		const regex = new RegExp(this.from, "g");
-
-		let isOver = false;
-		const results = [];
-		while (!isOver) {
-			const result = regex.exec(searchString);
-			if (result === null) {
-				isOver = true;
-				break;
-			}
-
-			const left = result.index + range.from;
-			const right = left + result[0].length;
-
-			if (outsideSelections(state.selection.ranges, left, right)) {
-				results.push(
-					Decoration.replace({ widget: this.widget }).range(
-						left,
-						right,
-					),
-				);
-			}
-		}
-		return results;
-	}
-
-	element(): WidgetType {
-		return new HTMLWidget(this.to, "span");
-	}
-
-	modifyHtmlElem(elem: HTMLElement): void {
-		const global_pattern = new RegExp(this.from.source, "g");
-		const replacement = this.widget.toDOM(null);
-		elem.innerHTML = elem.innerHTML.replaceAll(
-			global_pattern,
-			replacement.outerText,
-		);
+		return txt.replaceAll(global_matcher, (match: string) => {
+			const replacement = this.getReplacement(match);
+			const widget = this.getWidget(replacement);
+			const text = widget.toDOM(null).outerHTML;
+			return text;
+		});
 	}
 }
 
@@ -208,15 +148,12 @@ class Texify implements PatternMatcher {
 		return decs;
 	}
 
-	modifyHtmlElem(elem: HTMLElement): void {
+	transform(txt: string): string {
 		const global_pattern = new RegExp(this.match.source, "g");
-		elem.innerHTML = elem.innerHTML.replaceAll(
-			global_pattern,
-			(match: string) => {
-				const widget = new LatexWidget(match);
-				return widget.toDOM(null).outerHTML;
-			},
-		);
+		return txt.replaceAll(global_pattern, (match: string) => {
+			const widget = new LatexWidget(match);
+			return widget.toDOM(null).outerHTML;
+		});
 	}
 }
 
