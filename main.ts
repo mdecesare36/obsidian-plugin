@@ -84,7 +84,7 @@ class DashExpansionPlugin implements PluginValue {
 		new Texify(/\\.+?{.+?}/),
 		// underliner
 		new GeneralPatternMatcher(
-			/(?<=\s)-[^\n]+?-/,
+			/(?<=\s)-[^\s][^\n]+?[^\s]-/,
 			undefined,
 			"u",
 			{ txt: "", rmv: 1 },
