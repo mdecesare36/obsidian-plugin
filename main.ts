@@ -44,18 +44,10 @@ export default class Underliner extends Plugin {
 
 		// change reading view
 		this.registerMarkdownPostProcessor((element, context) => {
-			if (element.classList.contains("el-pre")) return;
-			for (const p of DashExpansionPlugin.postReplacements) {
+			for (const p of DashExpansionPlugin.replacements) {
 				p.modifyHtmlElem(element);
 			}
-		}, 0);
-
-		this.registerMarkdownPostProcessor((element, context) => {
-			if (element.classList.contains("el-pre")) return;
-			for (const p of DashExpansionPlugin.preReplacements) {
-				p.modifyHtmlElem(element);
-			}
-		}, -1);
+		});
 
 		this.registerEditorExtension(
 			ViewPlugin.define(() => {
@@ -70,14 +62,18 @@ export default class Underliner extends Plugin {
 }
 
 class DashExpansionPlugin implements PluginValue {
-	static postReplacements: PatternMatcher[] = [
-		// new Texify(/(?<=\s)([b-zB-HJ-Z])(?=[,.'\s])/), // variables
-		// new Texify(/\\[a-zA-Z]+?(?=[ \n\t\\])/), // escapes
-		// new Texify(/\\[^\s]+?{[^\n]+?}/), // commands with {}
-	];
-	static preReplacements: PatternMatcher[] = [
+	static replacements: PatternMatcher[] = [
+		// underliner
 		new GeneralPatternMatcher(
-			/(?<=\s)---(?=\s)/,
+			/(?<=^|\s|>)-[a-zA-Z][a-zA-Z0-9 ',.]*?(?<!\s-)-/,
+			undefined,
+			"u",
+			{ txt: "", rmv: 1 },
+			{ txt: "", rmv: 1 },
+			true,
+		),
+		new GeneralPatternMatcher(
+			/(?<=\s|>)---(?=\s|<)/,
 			undefined,
 			"",
 			{ txt: "&mdash;", rmv: 1 },
@@ -85,22 +81,16 @@ class DashExpansionPlugin implements PluginValue {
 			false,
 		),
 		new GeneralPatternMatcher(
-			/(?<=\s)--(?=\s)/,
+			/(?<=\s|>)--(?=\s|<)/,
 			undefined,
 			"",
 			{ txt: "&ndash;", rmv: 1 },
 			undefined,
 			false,
 		),
-		// underliner
-		new GeneralPatternMatcher(
-			/(?<=\s|^)-[a-zA-Z ,'0-9]+?-(?=\s.:)/,
-			undefined,
-			"u",
-			{ txt: "", rmv: 1 },
-			{ txt: "", rmv: 1 },
-			true,
-		),
+		new Texify(/(?<=\s)([b-zB-HJ-Z])(?=[,(. )'\s])/), // variables
+		new Texify(/\\[a-zA-Z]+?(?=[ \n\t\\])/), // escapes
+		new Texify(/\\[^\s]+?{[^\n]+?}/), // commands with {}
 		new GeneralPatternMatcher(
 			/TODO/,
 			{ style: "color: red;" },
@@ -134,10 +124,6 @@ class DashExpansionPlugin implements PluginValue {
 			true,
 		),
 	];
-
-	static replacements: PatternMatcher[] = this.preReplacements.concat(
-		this.postReplacements,
-	);
 
 	logger: Logger;
 	decorations: DecorationSet = Decoration.none;
